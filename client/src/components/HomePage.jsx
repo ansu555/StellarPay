@@ -7,8 +7,8 @@ import WithdrawForm from "./WithdrawForm";
 import TransactionHistory from "./TransactionHistory";
 import SendMoneyModal from "./SendMoneyModal";
 import WaitlistModal from "./WaitlistModal";
-import { useEmployeeStore } from "../store/empStore";
 import RegistrationCard from "./RegistrationCard";
+import { useEmployeeStore } from "../store/empStore";
 import { useCheckUser } from "../hooks/checkUser";
 
 

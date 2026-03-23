@@ -1,4 +1,4 @@
-import { registerEmployee } from "../services/sorobanService.js"; //getEmployeeWithWA,
+import { registerEmployee, getEmployeeWithWA } from "../services/sorobanService.js";
 import { useCallback } from "react";
 import { useEmployeeStore } from "../store/empStore.js";
 
@@ -33,7 +33,9 @@ export function useCheckUser() {
                 error.message?.includes("WasmVm") ||
                 error.message?.includes("InvalidAction") ||
                 error.message?.includes("simulation failed") ||
-                error.message?.includes("Wallet not registered");
+                error.message?.includes("Wallet not registered") ||
+                error.message?.includes("Employee not registered") ||
+                error.message?.includes("Invalid contract ID");
 
             if (!isNotRegistered) {
                 console.error("checkUser caught an unexpected bug, NOT a simple 'wallet missing' error:", error);

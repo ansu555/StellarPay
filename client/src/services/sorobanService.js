@@ -68,7 +68,16 @@ export async function fetchExchangeRates() {
 
 // Initialize Soroban RPC client
 const server = new rpc.Server(RPC_URL);
-
+function getWageContract() {
+  if (!CONTRACT_ADDRESS_WAGE) {
+    throw new Error("CONTRACT_ADDRESS_WAGE is not set. Please check .env and restart the app.");
+  }
+  try {
+    return new Contract(CONTRACT_ADDRESS_WAGE);
+  } catch (err) {
+    throw new Error(`Invalid contract ID for CONTRACT_ADDRESS_WAGE: ${CONTRACT_ADDRESS_WAGE}`);
+  }
+}
 // ============================================
 // ScVal HELPERS
 // ============================================
@@ -255,7 +264,7 @@ export async function requestAdvance(publicKey, empId, amount, tokenAddress = CO
 export async function getVaultBalance(publicKey, tokenAddress = CONTRACT_ADDRESS_TOKEN) {
   try {
     const account = await server.getAccount(publicKey);
-    const contract = new Contract(CONTRACT_ADDRESS_WAGE);
+  const contract = getWageContract();
     const operation = contract.call("vault_balance", addressToScVal(tokenAddress));
 
     const transaction = new TransactionBuilder(account, {
@@ -281,7 +290,7 @@ export async function getVaultBalance(publicKey, tokenAddress = CONTRACT_ADDRESS
 export async function getEmployeeDetails(publicKey, empId) {
   try {
     const account = await server.getAccount(publicKey);
-    const contract = new Contract(CONTRACT_ADDRESS_WAGE);
+    const contract = getWageContract();
     const operation = contract.call("get_emp_details", numberToU128(empId));
 
     const transaction = new TransactionBuilder(account, {
@@ -293,11 +302,63 @@ export async function getEmployeeDetails(publicKey, empId) {
       .build();
 
     const simResult = await server.simulateTransaction(transaction);
-    if (simResult.result) return simResult.result.retval;
+    if (simResult.result) {
+      const raw = xdr.ScVal.fromXDR(simResult.result.retval.toXDR());
+      return scValToNative(raw);
+    }
     return null;
   } catch (error) {
     console.error("Error getting employee details:", error);
     return null;
+  }
+}
+
+export async function getEmployeeIdByWallet(walletAddress) {
+  try {
+    const account = await server.getAccount(walletAddress);
+    const contract = getWageContract();
+    const operation = contract.call("get_emp_id_by_wallet", addressToScVal(walletAddress));
+
+    const transaction = new TransactionBuilder(account, {
+      fee: BASE_FEE,
+      networkPassphrase: Networks.TESTNET,
+    })
+      .addOperation(operation)
+      .setTimeout(300)
+      .build();
+
+    const simResult = await server.simulateTransaction(transaction);
+    if (simResult.result) {
+      const sc = xdr.ScVal.fromXDR(simResult.result.retval.toXDR());
+      const id = Number(sc.u128().lo().toString());
+      return id;
+    }
+
+    return 0;
+  } catch (error) {
+    console.error("Error getting employee ID by wallet:", error);
+    return 0;
+  }
+}
+
+export async function getEmployeeWithWA(walletAddress) {
+  try {
+    const empId = await getEmployeeIdByWallet(walletAddress);
+    if (!empId) throw new Error("Employee not registered");
+
+    const details = await getEmployeeDetails(walletAddress, empId);
+    if (!details) throw new Error("Employee details not found");
+
+    return {
+      empId,
+      wallet: details.wallet || walletAddress,
+      rem_salary: Number(details.rem_salary || 0),
+      salary_token: details.salary_token,
+      ...details,
+    };
+  } catch (error) {
+    console.error("Error getting employee with wallet address:", error);
+    throw error;
   }
 }
 
@@ -373,6 +434,7 @@ export default {
   requestAdvance,
   getVaultBalance,
   getEmployeeDetails,
+  getEmployeeWithWA,
   getRemainingSalary,
   releaseRemainingSalary,
   getWalletTokenBalances,

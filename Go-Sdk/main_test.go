@@ -198,6 +198,10 @@ func TestSendLumens_InvalidJSON(t *testing.T) {
 	}
 }
 
+func sendLumens(rr *httptest.ResponseRecorder, req *http.Request) {
+	panic("unimplemented")
+}
+
 func TestSendLumens_MissingRecipient(t *testing.T) {
 	body, _ := json.Marshal(TransferRequest{Recipient: "", Amount: "100"})
 	req, _ := http.NewRequest("POST", "/api/send", bytes.NewBuffer(body))
