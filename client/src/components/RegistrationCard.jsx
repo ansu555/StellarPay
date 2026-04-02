@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useEmployeeStore } from "../store/empStore";
-import {  registerEmployee } from "../services/sorobanService";//getEmployeeWithWA
+import { registerEmployee, getEmployeeWithWA } from "../services/sorobanService";
 import { useWalletContext } from "../context/WalletContext";
 import Card from "./Cards";
 import Button from "./Button";
@@ -23,10 +23,11 @@ const RegistrationCard = ({ onSuccess }) => {
     const [error, setErrors] = useState({
         email: "",
         salary: "",
+        general: "",
     });
 
     const dataValidate = () => {
-        const newErrors = {};
+        const newErrors = { general: "" }; // Clear general error on validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
         if (!form.email || !emailRegex.test(form.email)) {
@@ -42,14 +43,23 @@ const RegistrationCard = ({ onSuccess }) => {
     const handleSubmit = async (e) => {
         // user registration is handled here
         e.preventDefault();
+
+        if (!walletAddress) {
+            setErrors({ ...error, general: "Connect your Freighter wallet before registering." });
+            return;
+        }
+
         if (!dataValidate()) return;
         try {
             setIsLoading(true);
             const salaryInStroops = Math.floor(Number(form.salary) * 10000000);
+
+            console.debug("Attempting employee registration", { walletAddress, salaryInStroops });
             const resp = await registerEmployee(walletAddress, walletAddress, salaryInStroops);
+            console.log("registerEmployee response", resp);
 
             if (!resp.success) {
-                setError("Registration failed. Please try again.");
+                setErrors({ ...error, general: "Registration failed. Please try again." });
                 return;
             }
 
@@ -92,7 +102,7 @@ const RegistrationCard = ({ onSuccess }) => {
             }
 
             console.error("CRITICAL REGISTRATION ERROR CAUGHT IN UI:", error);
-            setError(error.message || "An error occurred during registration. Please try again.");
+            setErrors({ ...error, general: error.message || "An error occurred during registration. Please try again." });
         }
         finally {
             setIsLoading(false);
@@ -119,7 +129,11 @@ const RegistrationCard = ({ onSuccess }) => {
 
                     <div className="w-full h-px bg-white/10 mb-8" />
 
-                    <div className="flex flex-col gap-5">
+                    <div className="flex flex-col gap-5">                        {error.general && (
+                            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                                <p className="text-red-400 text-sm">{error.general}</p>
+                            </div>
+                        )}
                         <InputField
                             label="Email Address"
                             type="email"

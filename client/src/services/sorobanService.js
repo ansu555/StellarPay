@@ -214,12 +214,31 @@ export async function getWalletTokenBalances(publicKey) {
 // ============================================
 
 export async function registerEmployee(publicKey, walletAddress, salary, salaryToken = CONTRACT_ADDRESS_TOKEN) {
-  const args = [
-    addressToScVal(walletAddress),
-    numberToU128(salary),
-    addressToScVal(salaryToken),
-  ];
-  const preparedTx = await buildContractCall(publicKey, CONTRACT_ADDRESS_WAGE, "register_employee", args);
+  if (!publicKey || !walletAddress) {
+    throw new Error("Wallet address not available for registration. Please connect wallet.");
+  }
+
+  try {
+    const args = [
+      addressToScVal(walletAddress),
+      numberToU128(salary),
+      addressToScVal(salaryToken),
+    ];
+
+    const preparedTx = await buildContractCall(publicKey, CONTRACT_ADDRESS_WAGE, "register_employee", args);
+    const signedTx = await signWithFreighter(preparedTx);
+
+    const result = await submitTransaction(signedTx);
+    console.log("registerEmployee transaction success:", result);
+    return result;
+  } catch (error) {
+    console.error("registerEmployee error:", error);
+    throw error;
+  }
+}
+
+export async function getAdmin() {
+  const preparedTx = await buildContractCall("GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5", CONTRACT_ADDRESS_WAGE, "get_admin", []);
   const signedTx = await signWithFreighter(preparedTx);
   return submitTransaction(signedTx);
 }
@@ -344,10 +363,14 @@ export async function getEmployeeIdByWallet(walletAddress) {
 export async function getEmployeeWithWA(walletAddress) {
   try {
     const empId = await getEmployeeIdByWallet(walletAddress);
-    if (!empId) throw new Error("Employee not registered");
+    if (!empId) {
+      return null;
+    }
 
     const details = await getEmployeeDetails(walletAddress, empId);
-    if (!details) throw new Error("Employee details not found");
+    if (!details) {
+      return null;
+    }
 
     return {
       empId,
@@ -430,6 +453,7 @@ export async function getTransactionHistory(publicKey) {
 
 export default {
   registerEmployee,
+  getAdmin,
   depositToVault,
   requestAdvance,
   getVaultBalance,

@@ -154,14 +154,15 @@ impl EarlyWageContract {
     // Employee Management
     // --------------------------------------------------------
 
-    /// Register a new employee. Only the admin can call this.
+    /// Register a new employee. Employees can self-register.
     pub fn register_employee(
         e: Env,
         wallet: Address,
         salary: u128,
         salary_token: Address,
     ) -> Result<u128, ContractError> {
-        Self::require_admin(&e)?;
+        // Allow self-registration - no admin check needed
+        // Self::require_admin(&e)?;
 
         if salary == 0 {
             return Err(ContractError::InvalidAmount);
@@ -202,7 +203,7 @@ impl EarlyWageContract {
         e.storage().instance().set(&EMP_COUNT, &emp_id);
 
         e.events()
-            .publish((symbol_short!("employee"), symbol_short!("registered")), (emp_id, wallet));
+            .publish((symbol_short!("employee"), symbol_short!("reg")), (emp_id, wallet));
 
         Ok(emp_id)
     }

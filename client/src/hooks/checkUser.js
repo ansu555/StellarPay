@@ -20,6 +20,11 @@ export function useCheckUser() {
         try {
             setLoading(true)
             const empData = await getEmployeeWithWA(address);
+
+            if (!empData) {
+                return { isRegistered: false };
+            }
+
             setEmpData({
                 empId: empData.empId,
                 salary: empData.rem_salary / 10000000,
@@ -29,12 +34,12 @@ export function useCheckUser() {
 
         } catch (error) {
             console.error("checkUser error details:", error);
+
             const isNotRegistered =
                 error.message?.includes("WasmVm") ||
                 error.message?.includes("InvalidAction") ||
                 error.message?.includes("simulation failed") ||
                 error.message?.includes("Wallet not registered") ||
-                error.message?.includes("Employee not registered") ||
                 error.message?.includes("Invalid contract ID");
 
             if (!isNotRegistered) {
